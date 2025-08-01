@@ -1,0 +1,79 @@
+name: my-rock-name
+# see https://documentation.ubuntu.com/rockcraft/en/latest/explanation/bases/
+# for more information about bases and using 'bare' bases for chiselled rocks
+base: bare # the base environment for this rock
+build-base: ubuntu@24.04 # the base environment for this rock
+version: '0.1' # just for humans. Semantic versioning is recommended
+summary: Single-line elevator pitch for your amazing rock # 79 char long summary
+# run-user: _daemon_
+description: |
+    This is my-rock-name's description. You have a paragraph or two to tell the
+    most important story about it. Keep it under 100 words though,
+    we live in tweetspace and your description wants to look good in the
+    container registries out there.
+platforms: # the platforms this rock should be built on and run on
+    amd64:
+
+parts:
+  # Look for SelfContained in PropertyGroup and TreatAsLocalProperty in internet...
+  my-part-self-contained:
+    build-packages:
+      # I get this error to build:
+      # Process terminated. Couldn't find a valid ICU package installed on the system. Please install libicu (or icu-libs) using your package manager and try again. Alternatively you can set the configuration flag System.Globalization.Invariant to true if you want to run with no globalization support. Please see https://aka.ms/dotnet-missing-libicu for more information.      
+      - "libicu74"
+    build-snaps:
+      - "dotnet-sdk-80"
+    stage-packages:
+      # Same error as in build...
+      - base-files # also install base-files to ensure a basic filesystem structure
+      - "libicu74"
+      - coreutils
+      # - libc6
+      # - bash
+    # user `plugin: dump` and `source: .` as an alternative, and dotnet publish
+    # will not need a reference to CRAFT_PROJECT_DIR
+    plugin: nil
+    override-build: |
+      /snap/dotnet-sdk-80/current/usr/bin/dotnet publish "${CRAFT_PROJECT_DIR}" --self-contained -p:AssemblyName=myapp --output "${CRAFT_PART_INSTALL}"
+
+  # my-part-not-self-contained:
+  #   build-packages:
+  #     # I get this error to build:
+  #     # Process terminated. Couldn't find a valid ICU package installed on the system. Please install libicu (or icu-libs) using your package manager and try again. Alternatively you can set the configuration flag System.Globalization.Invariant to true if you want to run with no globalization support. Please see https://aka.ms/dotnet-missing-libicu for more information.      
+  #     - "libicu74"
+  #   build-snaps:
+  #     - "dotnet-sdk-80"
+  #   stage-packages:
+  #     # Same error as in build...
+  #     - "libicu74"
+  #   stage-snaps:
+  #     - "aspnetcore-runtime-80"
+  #   # user `plugin: dump` and `source: .` as an alternative, and dotnet publish
+  #   # will not need a reference to CRAFT_PROJECT_DIR
+  #   plugin: nil
+  #   override-build: |
+  #     /snap/dotnet-sdk-80/current/usr/bin/dotnet publish "${CRAFT_PROJECT_DIR}" --no-self-contained -p:AssemblyName=myapp --output "${CRAFT_PART_INSTALL}"
+
+  # # Then the default (False), or the one specified in the csproj holds for self-contained.
+  # my-part-not-specified:
+  #   build-packages:
+  #     - "libicu74"
+  #   build-snaps:
+  #     - "dotnet-sdk-80"
+  #   stage-packages:
+  #     - "libicu74"
+  #   # user `plugin: dump` and `source: .` as an alternative, and dotnet publish
+  #   # will not need a reference to CRAFT_PROJECT_DIR
+  #   plugin: nil
+  #   override-build: |
+  #     /snap/dotnet-sdk-80/current/usr/bin/dotnet publish "${CRAFT_PROJECT_DIR}" -p:AssemblyName=myapp --output "${CRAFT_PART_INSTALL}"
+
+services:
+  dotnet:
+    override: replace
+    command: /myapp
+    startup: enabled
+    # user: _daemon_
+    environment:
+      # https://learn.microsoft.com/en-us/aspnet/core/fundamentals/host/web-host?view=aspnetcore-9.0&preserve-view=true#server-urls
+      ASPNETCORE_URLS: "http://*:5000"
